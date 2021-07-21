@@ -258,16 +258,21 @@ void TestThreadSafety() {
     // Test and warm up allocator.
     tests();
 
-    // Ensure that cosumption is stabilized.
-    std::size_t initial = utils::GetMemoryUsage();
-    for (;;) {
+#if !__TBB_USE_ADDRESS_SANITIZER
+    constexpr size_t num_trials = 1000;
+    bool no_memory_leak = false;
+    size_t initial_memory_usage = utils::GetMemoryUsage();
+    for (size_t i = 0; i < num_trials; i++) {
         tests();
-        std::size_t current = utils::GetMemoryUsage();
-        if (current <= initial) {
-            return;
+        size_t current_memory_usage = utils::GetMemoryUsage();
+        if (current_memory_usage <= initial_memory_usage) {
+            no_memory_leak = true;
+            break;
         }
-        initial = current;
     }
+
+    REQUIRE_MESSAGE(no_memory_leak, "Memory leak is detected.");
+#endif
 }
 //------------------------------------------------------------------------
 // Common requisites of the Fibonacci tests
